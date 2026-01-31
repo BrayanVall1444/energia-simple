@@ -1,4 +1,4 @@
-const API_URL = "https://uptc-energy-api.onrender.com/predict";
+const API_URL = "/api/predict";
 const SEDE = "UPTC_CHI";
 const TARGET = "energia_total_kwh";
 const SEDES = ["UPTC_CHI", "UPTC_TUN", "UPTC_DUI", "UPTC_SOG"];
