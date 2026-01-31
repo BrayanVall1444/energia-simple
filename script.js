@@ -174,8 +174,22 @@ async function sendChat(text) {
   });
 
   console.log("Chat status:", res.status);
-  const data = await res.json();
-  console.log("Chat response:", data);
+
+  const raw = await res.text();
+  console.log("Chat raw:", raw);
+
+  if (!res.ok) {
+    throw new Error(raw);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("Respuesta no-JSON: " + raw);
+  }
+
+  console.log("Chat parsed:", data);
 
   if (data.accion === "preguntar") {
     history.push({ role: "assistant", content: data.mensaje });
@@ -194,6 +208,7 @@ async function sendChat(text) {
 
   return "No entendí tu solicitud.";
 }
+
 
 document.getElementById("chatSend").addEventListener("click", async () => {
   const input = document.getElementById("chatInput");

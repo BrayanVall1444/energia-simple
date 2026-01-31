@@ -2,8 +2,9 @@ import OpenAI from "openai";
 
 export default async function handler(req, res) {
   try {
-    console.log("CHAT HIT", req.method);
+    console.log("CHAT_METHOD", req.method);
     console.log("HAS_KEY", Boolean(process.env.OPENAI_API_KEY));
+
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method Not Allowed" });
       return;
@@ -28,14 +29,14 @@ export default async function handler(req, res) {
     try {
       parsed = JSON.parse(text);
     } catch {
-      res.status(200).json({ accion: "preguntar", mensaje: "Indica fecha y hora de 2024." });
+      res.status(200).json({ accion: "preguntar", mensaje: "Indica fecha y hora de 2024 (ej: 2024-03-15 15:00)." });
       return;
     }
 
     res.status(200).json(parsed);
   } catch (e) {
     console.log("CHAT_ERROR", String(e));
-    console.log("CHAT_ERROR_STACK", e?.stack || "");
-    res.status(500).json({ error: "chat failure", detail: String(e) });
+    console.log("CHAT_STACK", e?.stack || "");
+    res.status(500).json({ error: "chat failure", detail: String(e), hasKey: Boolean(process.env.OPENAI_API_KEY) });
   }
 }
