@@ -80,7 +80,6 @@ function checkConsecutive(dfRows, startIdx, endIdx) {
 }
 
 async function loadDataset() {
-  console.log("Loading dataset_listoParaRedNeuronal3.csv");
   const r = await fetch("dataset_listoParaRedNeuronal3.csv");
   const text = await r.text();
   const parsed = parseCSV(text);
@@ -89,28 +88,21 @@ async function loadDataset() {
   const allCols = parsed.headers.filter(c => c !== "timestamp" && !SEDES.includes(c));
   const X_cols = allCols.filter(c => c !== TARGET);
   cols_full = [TARGET, ...X_cols];
-
-  console.log("Dataset loaded rows:", df_s.length);
 }
 
 async function callPredict(ts) {
-  console.log("callPredict ts:", ts);
-
   if (!df_s || !cols_full) throw new Error("Dataset no cargado");
   if (ts.getFullYear() !== 2024) throw new Error("Solo se permiten fechas de 2024");
 
   const idxMap = makeIndex(df_s);
   const key = tsToKey(ts);
-  console.log("Lookup key:", key);
 
   if (!idxMap.has(key)) throw new Error(`No existe timestamp exacto: ${key}`);
 
   const pos_t = idxMap.get(key);
-  console.log("pos_t:", pos_t);
 
   if (pos_t < LONG_W) throw new Error("Histórico insuficiente para long_window");
   if (pos_t - 24 < 0 || pos_t - 168 < 0) throw new Error("Histórico insuficiente para lags");
-
   if (!checkConsecutive(df_s, pos_t - LONG_W, pos_t)) throw new Error("Histórico no consecutivo");
 
   const sample_short = df_s.slice(pos_t - SHORT_W, pos_t).map(r => toRecord(r, cols_full));
@@ -127,15 +119,6 @@ async function callPredict(ts) {
     target_timestamp: key
   };
 
-  console.log("Payload summary:", {
-    sede: payload.sede,
-    target_timestamp: payload.target_timestamp,
-    short_len: payload.short_window.length,
-    long_len: payload.long_window.length,
-    cols_per_row: Object.keys(payload.long_window[0] || {}).length,
-    lags: payload.lags
-  });
-
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 180000);
 
@@ -151,18 +134,10 @@ async function callPredict(ts) {
     clearTimeout(t);
   }
 
-  console.log("Predict status:", res.status);
-
   const raw = await res.text();
-  console.log("Predict raw (first 600):", raw.slice(0, 600));
-
   if (!res.ok) throw new Error(raw);
-
   return JSON.parse(raw);
 }
-
-
-
 
 function getHistory() {
   return JSON.parse(sessionStorage.getItem("chatHistory") || "[]");
@@ -180,11 +155,29 @@ function append(role, text) {
   log.scrollTop = log.scrollHeight;
 }
 
+function getLastPred() {
+  return JSON.parse(sessionStorage.getItem("lastPred") || "null");
+}
+
+function setLastPred(obj) {
+  sessionStorage.setItem("lastPred", JSON.stringify(obj));
+}
+
+function explainFromLastPred(lp) {
+  const v = Number(lp.prediccion_kwh);
+  const sede = lp.sede;
+  const ts = lp.timestamp;
+
+  let nivel = "moderado";
+  if (v < 0.8) nivel = "bajo";
+  if (v > 1.6) nivel = "alto";
+
+  return `Significa que, para ${sede} en ${ts}, el consumo esperado durante esa hora es ~${v.toFixed(3)} kWh. Es un nivel ${nivel}. Esto sirve para anticipar picos, comparar con el consumo real y detectar desviaciones (por ejemplo, equipos encendidos fuera de horario). ¿Quieres que prediga otra hora para comparar?`;
+}
+
 async function sendChat(text) {
   const history = getHistory();
   history.push({ role: "user", content: text });
-
-  console.log("Sending to /api/chat:", history);
 
   const res = await fetch(CHAT_API, {
     method: "POST",
@@ -192,14 +185,8 @@ async function sendChat(text) {
     body: JSON.stringify({ messages: history })
   });
 
-  console.log("Chat status:", res.status);
-
   const raw = await res.text();
-  console.log("Chat raw:", raw);
-
-  if (!res.ok) {
-    throw new Error(raw);
-  }
+  if (!res.ok) throw new Error(raw);
 
   let data;
   try {
@@ -208,26 +195,55 @@ async function sendChat(text) {
     throw new Error("Respuesta no-JSON: " + raw);
   }
 
-  console.log("Chat parsed:", data);
-
   if (data.accion === "preguntar") {
-    history.push({ role: "assistant", content: data.mensaje });
-    setHistory(history);
-    return data.mensaje;
-  }
-
-  if (data.accion === "predecir") {
-    const ts = new Date(`${data.fecha}T${pad2(data.hora)}:00:00`);
-    const pred = await callPredict(ts);
-    const reply = `Para ${data.fecha} a las ${data.hora}:00 en ${data.sede}, la predicción es ${pred.prediccion_kwh} kWh.`;
+    const reply = data.mensaje || "Dime una fecha y hora de 2024 (ej: 2024-03-15 15:00).";
     history.push({ role: "assistant", content: reply });
     setHistory(history);
     return reply;
   }
 
-  return "No entendí tu solicitud.";
-}
+  if (data.accion === "fuera_rango") {
+    const reply = data.mensaje || "Este demo solo permite predicciones para fechas de 2024 (01/01/2024–31/12/2024). Ej: 2024-03-15 15:00.";
+    history.push({ role: "assistant", content: reply });
+    setHistory(history);
+    return reply;
+  }
 
+  if (data.accion === "no_soportado") {
+    const reply = data.mensaje || "En este demo solo predecimos energia_total_kwh (consumo de energía por hora).";
+    history.push({ role: "assistant", content: reply });
+    setHistory(history);
+    return reply;
+  }
+
+  if (data.accion === "explicar") {
+    const lp = getLastPred();
+    const reply = lp
+      ? explainFromLastPred(lp)
+      : "Primero pídeme una predicción de 2024 (ej: 2024-02-15 15:00) y luego te explico qué significa.";
+    history.push({ role: "assistant", content: reply });
+    setHistory(history);
+    return reply;
+  }
+
+  if (data.accion === "predecir") {
+    const ts = new Date(`${data.fecha}T${pad2(data.hora)}:00:00`);
+    const pred = await callPredict(ts);
+
+    const timestamp = `${data.fecha} ${pad2(data.hora)}:00:00`;
+    setLastPred({ sede: data.sede || SEDE, timestamp, prediccion_kwh: pred.prediccion_kwh });
+
+    const reply = `Para ${data.fecha} a las ${pad2(data.hora)}:00 en ${data.sede || SEDE}, la predicción es ${pred.prediccion_kwh} kWh.`;
+    history.push({ role: "assistant", content: reply });
+    setHistory(history);
+    return reply;
+  }
+
+  const fallback = "No entendí. Prueba: 'Predice 2024-02-15 15:00' o '¿Qué significa esa predicción?'.";
+  history.push({ role: "assistant", content: fallback });
+  setHistory(history);
+  return fallback;
+}
 
 document.getElementById("chatSend").addEventListener("click", async () => {
   const input = document.getElementById("chatInput");
@@ -241,7 +257,23 @@ document.getElementById("chatSend").addEventListener("click", async () => {
     const reply = await sendChat(text);
     append("assistant", reply);
   } catch (e) {
-    console.error("Chat error:", e);
+    append("assistant", "Error al procesar la consulta");
+  }
+});
+
+document.getElementById("chatInput").addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = "";
+  append("user", text);
+
+  try {
+    const reply = await sendChat(text);
+    append("assistant", reply);
+  } catch (err) {
     append("assistant", "Error al procesar la consulta");
   }
 });

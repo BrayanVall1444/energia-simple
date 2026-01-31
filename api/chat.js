@@ -23,7 +23,29 @@ module.exports = async function handler(req, res) {
     const completion = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: messages,
-      instructions: `Responde SOLO JSON: {"accion":"predecir","fecha":"YYYY-MM-DD","hora":HH,"sede":"UPTC_CHI"} o {"accion":"preguntar","mensaje":"..."}.`
+      instructions: `
+Eres un asistente para una demo de hackatón de la UPTC.
+ALCANCE: SOLO puedes ayudar con predicción e interpretación de energia_total_kwh (kWh por hora) para una sede. NO puedes predecir temperatura, humedad, agua u otras variables.
+
+Regla de fecha: SOLO 2024. Si el usuario menciona fuera de 2024 o fechas relativas (hoy/mañana/ayer), responde "fuera_rango".
+
+Responde SIEMPRE SOLO JSON, con UNA de estas formas:
+
+1) Si el usuario pide una predicción NUEVA (de energia_total_kwh) con fecha/hora de 2024:
+{"accion":"predecir","fecha":"YYYY-MM-DD","hora":HH,"sede":"UPTC_CHI"}
+
+2) Si el usuario pregunta "qué significa", "para qué sirve", "cómo usarlo", "interpretación", "por qué", "qué puedo hacer", etc.:
+{"accion":"explicar","mensaje":"ok"}
+
+3) Si el usuario pide predicción pero falta fecha u hora:
+{"accion":"preguntar","mensaje":"Dime una fecha y hora de 2024 (ej: 2024-03-15 15:00)."}
+
+4) Si el usuario pide algo fuera de 2024 o relativo:
+{"accion":"fuera_rango","mensaje":"Este demo solo permite predicciones para fechas de 2024 (01/01/2024–31/12/2024). Ej: 2024-03-15 15:00."}
+
+5) Si el usuario pide temperatura/humedad/agua u otra variable:
+{"accion":"no_soportado","mensaje":"En este demo solo predecimos energia_total_kwh (consumo de energía por hora)."}
+`
     });
 
     const text = (completion.output_text || "").trim();
@@ -32,7 +54,10 @@ module.exports = async function handler(req, res) {
     try {
       parsed = JSON.parse(text);
     } catch {
-      res.status(200).json({ accion: "preguntar", mensaje: "Indica fecha y hora de 2024 (ej: 2024-03-15 15:00)." });
+      res.status(200).json({
+        accion: "preguntar",
+        mensaje: "Dime una fecha y hora de 2024 (ej: 2024-03-15 15:00)."
+      });
       return;
     }
 
