@@ -2,24 +2,200 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>UPTC_CHI · Energía 2024</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UPTC · Energía & Eficiencia</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="logo">U</div>
+        <div class="brandText">
+          <div class="title">UPTC · Energía & Eficiencia</div>
+          <div class="subtitle">Demo hackatón · Predicción horaria (solo 2024) + análisis de ineficiencias</div>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">Sede: <strong>UPTC_CHI</strong></span>
+        <span class="chip">Predicción: <strong>energia_total_kwh</strong></span>
+      </div>
+    </header>
 
-<h1>UPTC_CHI  ·  Energía real vs predicha (2024)</h1>
+    <nav class="tabs">
+      <button class="tab active" data-tab="tab-pred">Predicción</button>
+      <button class="tab" data-tab="tab-inef">Ineficiencias</button>
+      <button class="tab" data-tab="tab-chat">Chat</button>
+    </nav>
 
-<div class="chatbox">
-  <div id="chatLog" class="chatlog"></div>
-  <div class="chatrow">
-    <input id="chatInput" placeholder="Ej: Predice para el 15 de febrero de 2024 a las 5pm" />
-    <button id="chatSend">Enviar</button>
+    <main class="content">
+      <section id="tab-pred" class="tabPanel active">
+        <div class="grid">
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <div class="cardTitle">Real vs Predicho (CSV)</div>
+                <div class="cardHint">Serie histórica del archivo <strong>predicciones.csv</strong></div>
+              </div>
+              <div class="actions">
+                <button id="btnResetZoom" class="btn ghost">Reset</button>
+              </div>
+            </div>
+            <div class="cardBody">
+              <canvas id="chartMain"></canvas>
+              <div class="miniNote" id="chartStatus"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardHeader">
+              <div>
+                <div class="cardTitle">Predicción puntual (Render)</div>
+                <div class="cardHint">Arma ventanas desde <strong>dataset_listoParaRedNeuronal3.csv</strong> y consulta a Render</div>
+              </div>
+            </div>
+            <div class="cardBody">
+              <div class="formRow">
+                <div class="field">
+                  <label>Fecha (solo 2024)</label>
+                  <input id="dateInput" type="date" min="2024-01-01" max="2024-12-31" value="2024-02-15">
+                </div>
+                <div class="field">
+                  <label>Hora</label>
+                  <select id="hourInput"></select>
+                </div>
+              </div>
+              <div class="formRow">
+                <button id="btnPredict" class="btn primary">Predecir</button>
+                <button id="btnToChat" class="btn">Enviar al chat</button>
+              </div>
+              <div class="statusRow">
+                <div id="status" class="status"></div>
+                <div id="result" class="result"></div>
+              </div>
+              <div class="divider"></div>
+              <div class="mini">
+                <div class="miniTitle">Tips rápidos</div>
+                <ul class="miniList">
+                  <li>Ejemplo: <strong>2024-02-15 15:00</strong></li>
+                  <li>Luego pregunta: <strong>“¿qué significa?”</strong> o <strong>“¿para qué sirve?”</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="card full">
+            <div class="cardHeader">
+              <div>
+                <div class="cardTitle">Chat</div>
+                <div class="cardHint">Pregunta en lenguaje natural. Si pides predicción, debe ser en 2024.</div>
+              </div>
+              <div class="actions">
+                <button id="btnClearChat" class="btn ghost">Reiniciar chat</button>
+              </div>
+            </div>
+            <div class="cardBody">
+              <div id="chatLog" class="chatLog"></div>
+              <div class="chatBar">
+                <input id="chatInput" class="chatInput" placeholder="Ej: predice para 15 de febrero de 2024 a las 15 horas">
+                <button id="chatSend" class="btn primary">Enviar</button>
+              </div>
+              <div class="chatHints">
+                <button class="pill" data-prompt="Predice para 2024-02-15 15:00">Predicción ejemplo</button>
+                <button class="pill" data-prompt="¿Qué significa esta predicción?">¿Qué significa?</button>
+                <button class="pill" data-prompt="¿Para qué le sirve esto a la U?">¿Para qué sirve?</button>
+                <button class="pill" data-prompt="¿Qué acciones recomiendas para reducir consumo en horarios no pico?">Acciones</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-inef" class="tabPanel">
+        <div class="grid">
+          <div class="card full">
+            <div class="cardHeader">
+              <div>
+                <div class="cardTitle">Reporte de ineficiencias (CSV)</div>
+                <div class="cardHint">Archivo <strong>df_resultado.csv</strong> · selecciona un evento para verlo y consultarlo en el chat</div>
+              </div>
+              <div class="actions">
+                <select id="instFilter" class="select"></select>
+                <button id="btnTop" class="btn">Top gravedad</button>
+              </div>
+            </div>
+            <div class="cardBody">
+              <div class="twoCols">
+                <div>
+                  <div id="inefStatus" class="miniNote"></div>
+                  <div id="inefList" class="list"></div>
+                </div>
+                <div class="detail">
+                  <div class="detailHeader">
+                    <div>
+                      <div class="detailTitle">Detalle</div>
+                      <div id="detailSub" class="detailSub"></div>
+                    </div>
+                    <div class="actions">
+                      <button id="btnAskAboutInef" class="btn primary" disabled>Preguntar al chat</button>
+                    </div>
+                  </div>
+                  <div id="detailBody" class="detailBody">
+                    <div class="empty">Selecciona una fila para ver el detalle.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="mini">
+                <div class="miniTitle">Ejemplos de preguntas</div>
+                <ul class="miniList">
+                  <li>“¿Qué indica esta ineficiencia?”</li>
+                  <li>“¿Causa probable y acciones inmediatas?”</li>
+                  <li>“¿Por qué alta energía con baja ocupación?”</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-chat" class="tabPanel">
+        <div class="grid">
+          <div class="card full">
+            <div class="cardHeader">
+              <div>
+                <div class="cardTitle">Chat</div>
+                <div class="cardHint">Mismo chat, pantalla completa</div>
+              </div>
+              <div class="actions">
+                <button id="btnClearChat2" class="btn ghost">Reiniciar chat</button>
+              </div>
+            </div>
+            <div class="cardBody">
+              <div id="chatLog2" class="chatLog"></div>
+              <div class="chatBar">
+                <input id="chatInput2" class="chatInput" placeholder="Escribe aquí…">
+                <button id="chatSend2" class="btn primary">Enviar</button>
+              </div>
+              <div class="chatHints">
+                <button class="pill" data-prompt="Predice para 2024-03-15 15:00">Predicción ejemplo</button>
+                <button class="pill" data-prompt="¿Qué significa la predicción?">Interpretación</button>
+                <button class="pill" data-prompt="¿Cómo usar esto para eficiencia energética?">Uso</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>Archivos: <strong>predicciones.csv</strong>, <strong>dataset_listoParaRedNeuronal3.csv</strong>, <strong>df_resultado.csv</strong></div>
+      <div class="muted">Predicción en Render · Chat con OpenAI · Memoria por sesión (sessionStorage)</div>
+    </footer>
   </div>
-</div>
 
-<canvas id="chart"></canvas>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

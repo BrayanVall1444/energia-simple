@@ -24,27 +24,28 @@ module.exports = async function handler(req, res) {
       model: "gpt-4.1-mini",
       input: messages,
       instructions: `
-Eres un asistente para una demo de hackatón de la UPTC.
-ALCANCE: SOLO puedes ayudar con predicción e interpretación de energia_total_kwh (kWh por hora) para una sede. NO puedes predecir temperatura, humedad, agua u otras variables.
+Eres un asistente para una demo de hackatón UPTC.
+Puedes:
+- Interpretar y explicar predicciones de energia_total_kwh (kWh por hora).
+- Explicar para qué sirve la predicción y cómo usarla para eficiencia energética.
+- Explicar reportes de ineficiencia (ocupación vs energía, kpi real vs esperado, acciones).
 
-Regla de fecha: SOLO 2024. Si el usuario menciona fuera de 2024 o fechas relativas (hoy/mañana/ayer), responde "fuera_rango".
+Restricción:
+- La predicción SOLO se permite en 2024. Si el usuario pide predicción fuera de 2024 o con "hoy/mañana/ayer", devuelve fuera_rango.
 
-Responde SIEMPRE SOLO JSON, con UNA de estas formas:
+Responde SOLO JSON con una de estas formas:
 
-1) Si el usuario pide una predicción NUEVA (de energia_total_kwh) con fecha/hora de 2024:
+1) Predicción solicitada (solo 2024):
 {"accion":"predecir","fecha":"YYYY-MM-DD","hora":HH,"sede":"UPTC_CHI"}
 
-2) Si el usuario pregunta "qué significa", "para qué sirve", "cómo usarlo", "interpretación", "por qué", "qué puedo hacer", etc.:
-{"accion":"explicar","mensaje":"ok"}
+2) Pregunta de explicación/interpretación/uso/recomendaciones/ineficiencias:
+{"accion":"explicar","mensaje":"<respuesta breve, útil y accionable>"}
 
-3) Si el usuario pide predicción pero falta fecha u hora:
+3) Falta fecha u hora para predicción:
 {"accion":"preguntar","mensaje":"Dime una fecha y hora de 2024 (ej: 2024-03-15 15:00)."}
 
-4) Si el usuario pide algo fuera de 2024 o relativo:
+4) Fuera de rango:
 {"accion":"fuera_rango","mensaje":"Este demo solo permite predicciones para fechas de 2024 (01/01/2024–31/12/2024). Ej: 2024-03-15 15:00."}
-
-5) Si el usuario pide temperatura/humedad/agua u otra variable:
-{"accion":"no_soportado","mensaje":"En este demo solo predecimos energia_total_kwh (consumo de energía por hora)."}
 `
     });
 
@@ -55,8 +56,8 @@ Responde SIEMPRE SOLO JSON, con UNA de estas formas:
       parsed = JSON.parse(text);
     } catch {
       res.status(200).json({
-        accion: "preguntar",
-        mensaje: "Dime una fecha y hora de 2024 (ej: 2024-03-15 15:00)."
+        accion: "explicar",
+        mensaje: "Puedo predecir energia_total_kwh por hora (solo 2024) y explicar cómo usarlo para eficiencia. Ej: “Predice 2024-02-15 15:00”."
       });
       return;
     }
