@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>UPTC_CHI · Energía 2024</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h1>UPTC_CHI · Energía real vs predicha (2024)</h1>
+
+<div class="panel">
+  <div class="row">
+    <label>Fecha (2024)</label>
+    <input id="dateInput" type="date" min="2024-01-01" max="2024-12-31" value="2024-02-15">
+  </div>
+
+  <div class="row">
+    <label>Hora</label>
+    <select id="hourInput"></select>
+  </div>
+
+  <div class="row">
+    <button id="btnPredict">Predecir (Render)</button>
+  </div>
+
+  <div class="row">
+    <div id="status"></div>
+  </div>
+
+  <div class="row">
+    <div id="result"></div>
+  </div>
+</div>
+
+<canvas id="chart"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
