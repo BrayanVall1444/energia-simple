@@ -14,9 +14,10 @@ export default async function handler(req, res) {
     model: "gpt-4.1-mini",
     input: messages,
     instructions: `
-Extrae una fecha y hora de 2024.
-Si el usuario pide predicción, responde SOLO en JSON así:
+Extrae intención del usuario.
+Si quiere predicción y tiene fecha/hora de 2024, responde SOLO este JSON:
 {"accion":"predecir","fecha":"YYYY-MM-DD","hora":HH,"sede":"UPTC_CHI"}
+
 Si falta información, responde:
 {"accion":"preguntar","mensaje":"..."}
 `
@@ -28,26 +29,12 @@ Si falta información, responde:
   try {
     parsed = JSON.parse(text);
   } catch {
-    res.status(200).json({ reply: "Indica una fecha y hora de 2024 para predecir." });
+    res.status(200).json({
+      accion: "preguntar",
+      mensaje: "Indica una fecha y hora de 2024 (ej: 2024-02-15 15:00)."
+    });
     return;
   }
 
-  if (parsed.accion !== "predecir") {
-    res.status(200).json({ reply: parsed.mensaje });
-    return;
-  }
-
-  const ts = `${parsed.fecha} ${String(parsed.hora).padStart(2,"0")}:00:00`;
-
-  const predictRes = await fetch(`https://${req.headers.host}/api/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sede: parsed.sede, target_timestamp: ts })
-  });
-
-  const pred = await predictRes.json();
-
-  res.status(200).json({
-    reply: `Para ${parsed.fecha} a las ${parsed.hora}:00 en ${parsed.sede}, la predicción es ${pred.prediccion_kwh} kWh.`
-  });
+  res.status(200).json(parsed);
 }

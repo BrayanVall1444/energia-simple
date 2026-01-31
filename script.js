@@ -20,18 +20,34 @@ async function sendChat(text) {
   const history = getHistory();
   history.push({ role: "user", content: text });
 
-  const res = await fetch(CHAT_API, {
+  const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages: history })
   });
 
   const data = await res.json();
-  history.push({ role: "assistant", content: data.reply });
-  setHistory(history);
 
-  return data.reply;
+  if (data.accion === "preguntar") {
+    history.push({ role: "assistant", content: data.mensaje });
+    setHistory(history);
+    return data.mensaje;
+  }
+
+  if (data.accion === "predecir") {
+    const ts = new Date(`${data.fecha}T${String(data.hora).padStart(2,"0")}:00:00`);
+    const pred = await callPredict(ts);
+
+    const reply = `Para ${data.fecha} a las ${data.hora}:00 en ${data.sede}, la predicción es ${pred.prediccion_kwh} kWh.`;
+
+    history.push({ role: "assistant", content: reply });
+    setHistory(history);
+    return reply;
+  }
+
+  return "No entendí tu solicitud.";
 }
+
 
 document.getElementById("chatSend").addEventListener("click", async () => {
   const input = document.getElementById("chatInput");
