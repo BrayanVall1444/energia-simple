@@ -111,9 +111,7 @@ async function callPredict(ts) {
   if (pos_t < LONG_W) throw new Error("Histórico insuficiente para long_window");
   if (pos_t - 24 < 0 || pos_t - 168 < 0) throw new Error("Histórico insuficiente para lags");
 
-  if (!checkConsecutive(df_s, pos_t - LONG_W, pos_t)) {
-    throw new Error("Histórico no consecutivo");
-  }
+  if (!checkConsecutive(df_s, pos_t - LONG_W, pos_t)) throw new Error("Histórico no consecutivo");
 
   const sample_short = df_s.slice(pos_t - SHORT_W, pos_t).map(r => toRecord(r, cols_full));
   const sample_long = df_s.slice(pos_t - LONG_W, pos_t).map(r => toRecord(r, cols_full));
@@ -129,21 +127,42 @@ async function callPredict(ts) {
     target_timestamp: key
   };
 
-  console.log("Payload to /api/predict:", payload);
-
-  const res = await fetch(API_PREDICT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+  console.log("Payload summary:", {
+    sede: payload.sede,
+    target_timestamp: payload.target_timestamp,
+    short_len: payload.short_window.length,
+    long_len: payload.long_window.length,
+    cols_per_row: Object.keys(payload.long_window[0] || {}).length,
+    lags: payload.lags
   });
 
-  console.log("Predict status:", res.status);
-  const text = await res.text();
-  console.log("Predict raw response:", text);
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 180000);
 
-  if (!res.ok) throw new Error(text);
-  return JSON.parse(text);
+  let res;
+  try {
+    res = await fetch(API_PREDICT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(t);
+  }
+
+  console.log("Predict status:", res.status);
+
+  const raw = await res.text();
+  console.log("Predict raw (first 600):", raw.slice(0, 600));
+
+  if (!res.ok) throw new Error(raw);
+
+  return JSON.parse(raw);
 }
+
+
+
 
 function getHistory() {
   return JSON.parse(sessionStorage.getItem("chatHistory") || "[]");
