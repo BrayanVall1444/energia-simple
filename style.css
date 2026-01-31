@@ -12,30 +12,33 @@ canvas {
   height: 500px;
 }
 
-.panel {
+.chatbox {
   max-width: 900px;
-  margin: 0 auto 18px auto;
-  padding: 14px;
+  margin: 0 auto 20px auto;
   border: 1px solid #ddd;
   border-radius: 8px;
+  padding: 12px;
 }
 
-.row {
+.chatlog {
+  height: 220px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fafafa;
+}
+
+.chatrow {
   display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 10px 0;
+  gap: 10px;
 }
 
-label {
-  width: 110px;
+.chatrow input {
+  flex: 1;
+  padding: 10px;
 }
 
-#status {
-  font-size: 14px;
-}
-
-#result {
-  font-size: 16px;
-  font-weight: 600;
+.chatrow button {
+  padding: 10px 14px;
 }

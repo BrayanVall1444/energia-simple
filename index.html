@@ -10,27 +10,11 @@
 
 <h1>UPTC_CHI · Energía real vs predicha (2024)</h1>
 
-<div class="panel">
-  <div class="row">
-    <label>Fecha (2024)</label>
-    <input id="dateInput" type="date" min="2024-01-01" max="2024-12-31" value="2024-02-15">
-  </div>
-
-  <div class="row">
-    <label>Hora</label>
-    <select id="hourInput"></select>
-  </div>
-
-  <div class="row">
-    <button id="btnPredict">Predecir (Render)</button>
-  </div>
-
-  <div class="row">
-    <div id="status"></div>
-  </div>
-
-  <div class="row">
-    <div id="result"></div>
+<div class="chatbox">
+  <div id="chatLog" class="chatlog"></div>
+  <div class="chatrow">
+    <input id="chatInput" placeholder="Ej: Predice para el 15 de febrero de 2024 a las 5pm" />
+    <button id="chatSend">Enviar</button>
   </div>
 </div>
 
